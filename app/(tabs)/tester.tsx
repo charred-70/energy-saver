@@ -34,33 +34,6 @@ export default function Tester() {
     };
   }, []);
 
-  // const [values, setValues] = useState<number[]>([]);
-  // const [status, setStatus] = useState<
-  //   "connecting" | "open" | "closed" | "error"
-  // >("connecting");
-
-  // useEffect(() => {
-  //   const ws = new WebSocket("ws://localhost:8000/ws/generate_numbers");
-
-  //   ws.onopen = () => setStatus("open");
-  //   ws.onclose = () => setStatus("closed");
-  //   ws.onerror = () => setStatus("error");
-
-  //   ws.onmessage = (event) => {
-  //     try {
-  //       const msg: Msg = JSON.parse(event.data);
-  //       if (msg.type === "number") {
-  //         // keep last 200 numbers to avoid memory growth
-  //         setValues((prev) => [...prev.slice(-199), msg.value]);
-  //       }
-  //     } catch {
-  //       // ignore non-JSON messages
-  //     }
-  //   };
-
-  //   return () => ws.close();
-  // }, []);
-
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
