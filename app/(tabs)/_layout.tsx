@@ -30,8 +30,9 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Energy Dashboard',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />
-            ),
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="paperplane.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -41,9 +42,9 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="chevron.right" color={color} />
           ),
-              }}
-        />
-            
+        }}
+      />
+
     </Tabs>
   );
 }

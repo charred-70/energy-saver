@@ -1,112 +1,465 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
 
-export default function TabTwoScreen() {
+const { width } = Dimensions.get('window');
+
+export default function EnergyDashboard() {
+  const [timeRange, setTimeRange] = useState('24h');
+
+  // Sample data
+  const currentUsage = 2.4;
+  const todayConsumption = 18.5;
+  const monthlyCost = 127.8;
+  const co2Saved = 12;
+
+  const hourlyData = [
+    1.2, 1.1, 0.9, 0.8, 0.9, 1.5, 2.1, 2.8, 3.2, 2.9, 2.5, 2.7,
+    3.1, 2.8, 2.6, 2.4, 2.8, 3.5, 4.2, 3.8, 3.2, 2.8, 2.1, 1.8,
+  ];
+
+  const breakdown = [
+    { name: 'Heating/Cooling', value: 45, color: '#ef4444' },
+    { name: 'Appliances', value: 25, color: '#f59e0b' },
+    { name: 'Lighting', value: 15, color: '#10b981' },
+    { name: 'Electronics', value: 15, color: '#3b82f6' },
+  ];
+
+  const recentActivity = [
+    { device: 'Air Conditioner', status: 'on', time: '2:34 PM', power: '2.1 kW' },
+    { device: 'Dishwasher', status: 'off', time: '1:15 PM', power: '0 kW' },
+    { device: 'Water Heater', status: 'on', time: '12:45 PM', power: '1.8 kW' },
+    { device: 'Washing Machine', status: 'off', time: '11:20 AM', power: '0 kW' },
+  ];
+
+  const maxValue = Math.max(...hourlyData);
+
+  type MetricCardProps = {
+    icon: IconSymbolName;
+    label: string;
+    value: number | string;
+    unit: string;
+    color: string;
+    bgColor: string;
+  };
+
+  const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, unit, color, bgColor }) => (
+    <ThemedView style={[styles.metricCard, { backgroundColor: '#ffffff' }]}>
+      <View style={styles.metricHeader}>
+        <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
+          <IconSymbol name={icon} size={20} color={color} />
+        </View>
+        <Text style={styles.metricLabel}>{label}</Text>
+      </View>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricUnit}>{unit}</Text>
+    </ThemedView>
+  );
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: '#2563eb', dark: '#1e40af' }}
       headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Energy Dashboard</Text>
+            <Text style={styles.headerSubtitle}>Saturday, Feb 14, 2026</Text>
+          </View>
+          <IconSymbol name="bolt.fill" size={40} color="#ffffff" />
+        </View>
       }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
+
+      {/* Metric Cards */}
+      <ThemedView style={styles.section}>
+        <View style={styles.metricsGrid}>
+          <MetricCard
+            icon="bolt.fill"
+            label="Current"
+            value={currentUsage}
+            unit="kW"
+            color="#dc2626"
+            bgColor="#fee2e2"
+          />
+          <MetricCard
+            icon="battery.100"
+            label="Today"
+            value={todayConsumption}
+            unit="kWh"
+            color="#2563eb"
+            bgColor="#dbeafe"
+          />
+          <MetricCard
+            icon="dollarsign.circle"
+            label="Monthly"
+            value={`$${monthlyCost}`}
+            unit="this month"
+            color="#ca8a04"
+            bgColor="#fef3c7"
+          />
+          <MetricCard
+            icon="leaf.fill"
+            label="CO₂ Saved"
+            value={co2Saved}
+            unit="kg today"
+            color="#16a34a"
+            bgColor="#dcfce7"
+          />
+        </View>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
+
+      {/* Usage Chart */}
+      <ThemedView style={styles.card}>
+        <View style={styles.cardHeader}>
+          <ThemedText type="subtitle">Usage Today</ThemedText>
+          <View style={styles.timeRangeButtons}>
+            <TouchableOpacity
+              style={[
+                styles.timeButton,
+                timeRange === '24h' && styles.timeButtonActive,
+              ]}
+              onPress={() => setTimeRange('24h')}>
+              <Text
+                style={[
+                  styles.timeButtonText,
+                  timeRange === '24h' && styles.timeButtonTextActive,
+                ]}>
+                24h
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.timeButton,
+                timeRange === '7d' && styles.timeButtonActive,
+              ]}
+              onPress={() => setTimeRange('7d')}>
+              <Text
+                style={[
+                  styles.timeButtonText,
+                  timeRange === '7d' && styles.timeButtonTextActive,
+                ]}>
+                7d
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bar Chart */}
+        <View style={styles.chartContainer}>
+          {hourlyData.map((value, index) => (
+            <View
+              key={index}
+              style={[
+                styles.bar,
+                { height: `${(value / maxValue) * 100}%` },
+              ]}
+            />
+          ))}
+        </View>
+
+        <View style={styles.chartLabels}>
+          <Text style={styles.chartLabel}>12 AM</Text>
+          <Text style={styles.chartLabel}>6 AM</Text>
+          <Text style={styles.chartLabel}>12 PM</Text>
+          <Text style={styles.chartLabel}>6 PM</Text>
+          <Text style={styles.chartLabel}>Now</Text>
+        </View>
+      </ThemedView>
+
+      {/* Energy Breakdown */}
+      <ThemedView style={styles.card}>
+        <ThemedText type="subtitle" style={styles.cardTitle}>
+          Energy Breakdown
         </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
+        <View style={styles.breakdownContainer}>
+          {breakdown.map((item, index) => (
+            <View key={index} style={styles.breakdownItem}>
+              <View style={styles.breakdownHeader}>
+                <ThemedText style={styles.breakdownLabel}>{item.name}</ThemedText>
+                <ThemedText type="defaultSemiBold">{item.value}%</ThemedText>
+              </View>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${item.value}%`,
+                      backgroundColor: item.color,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      </ThemedView>
+
+      {/* Recent Activity */}
+      <ThemedView style={styles.card}>
+        <View style={styles.activityHeader}>
+          <IconSymbol name="chart.line.downtrend.xyaxis" size={20} color="#374151" />
+          <ThemedText type="subtitle" style={styles.cardTitle}>
+            Recent Activity
+          </ThemedText>
+        </View>
+        <View style={styles.activityList}>
+          {recentActivity.map((item, index) => (
+            <View
+              key={index}
+              style={[
+                styles.activityItem,
+                index !== recentActivity.length - 1 && styles.activityItemBorder,
+              ]}>
+              <View style={styles.activityLeft}>
+                <View
+                  style={[
+                    styles.activityIcon,
+                    item.status === 'on'
+                      ? styles.activityIconOn
+                      : styles.activityIconOff,
+                  ]}>
+                  <IconSymbol
+                    name="power"
+                    size={16}
+                    color={item.status === 'on' ? '#16a34a' : '#9ca3af'}
+                  />
+                </View>
+                <View>
+                  <ThemedText type="defaultSemiBold" style={styles.activityDevice}>
+                    {item.device}
+                  </ThemedText>
+                  <Text style={styles.activityTime}>{item.time}</Text>
+                </View>
+              </View>
+              <View style={styles.activityRight}>
+                <Text
+                  style={[
+                    styles.activityStatus,
+                    item.status === 'on'
+                      ? styles.activityStatusOn
+                      : styles.activityStatusOff,
+                  ]}>
+                  {item.status.toUpperCase()}
+                </Text>
+                <Text style={styles.activityPower}>{item.power}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
+  headerContent: {
     position: 'absolute',
+    top: 50,
+    left: 24,
+    right: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  titleContainer: {
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#bfdbfe',
+  },
+  section: {
+    marginTop: 16,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  metricCard: {
+    width: (width - 48) / 2,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  iconContainer: {
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  metricUnit: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    marginBottom: 0,
+  },
+  timeRangeButtons: {
     flexDirection: 'row',
     gap: 8,
+  },
+  timeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  timeButtonActive: {
+    backgroundColor: '#2563eb',
+  },
+  timeButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  timeButtonTextActive: {
+    color: '#ffffff',
+  },
+  chartContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 160,
+    marginBottom: 12,
+  },
+  bar: {
+    width: (width - 120) / 24,
+    backgroundColor: '#2563eb',
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  chartLabel: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  breakdownContainer: {
+    marginTop: 16,
+  },
+  breakdownItem: {
+    marginBottom: 16,
+  },
+  breakdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  breakdownLabel: {
+    fontSize: 14,
+  },
+  progressBar: {
+    height: 10,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  activityList: {
+    marginTop: 12,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  activityItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  activityLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  activityIcon: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  activityIconOn: {
+    backgroundColor: '#dcfce7',
+  },
+  activityIconOff: {
+    backgroundColor: '#f3f4f6',
+  },
+  activityDevice: {
+    fontSize: 14,
+  },
+  activityTime: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 2,
+  },
+  activityRight: {
+    alignItems: 'flex-end',
+  },
+  activityStatus: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  activityStatusOn: {
+    color: '#16a34a',
+  },
+  activityStatusOff: {
+    color: '#9ca3af',
+  },
+  activityPower: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 2,
   },
 });
