@@ -13,6 +13,8 @@ type Msg =
 export default function Tester() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [username2, setUsername2] = useState("");
+  const [password2, setPassword2] = useState("");
   const latestValue = useRef("shiballlll");
   const [message, setMessage] = useState("shiballlll");
 
@@ -22,8 +24,6 @@ export default function Tester() {
     ws.onmessage = (event) => {
       const numberz = JSON.parse(event.data);
       latestValue.current = numberz.value;
-      console.log(typeof latestValue.current);
-
       console.log("Received message:", latestValue.current);
     };
 
@@ -53,6 +53,26 @@ export default function Tester() {
       alert("Login successful!");
     } else {
       alert("Login failed: " + data.message);
+    }
+  }
+
+  async function handleSignup() {
+    //add code to call backend api
+    //feed in username and password
+    //backend api should return whether or not the signup was successful
+    const response = await fetch("http://localhost:8000/attempt_signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username: username2, password: password2 }),
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      alert("Sign up successful!");
+    } else {
+      alert("Sign up failed: " + data.message);
     }
   }
 
@@ -88,17 +108,31 @@ export default function Tester() {
         <ThemedText id="shibal">{message}</ThemedText>
       </ThemedView>
       <ThemedView style={styles.stepContainer}></ThemedView>
+      <ThemedText type="subtitle">Login</ThemedText>
+
       <TextInput
-        placeholder="enter username here"
+        placeholder="username"
         onChangeText={(text) => setUsername(text)}
         value={username}
       />
       <TextInput
-        placeholder="enter password here"
+        placeholder="password"
         onChangeText={(text) => setPassword(text)}
         value={password}
       />
       <Button title="Submit" onPress={handleSubmit} />
+      <ThemedText type="subtitle">Sign Up</ThemedText>
+      <TextInput
+        placeholder="enter username here"
+        onChangeText={(text) => setUsername2(text)}
+        value={username2}
+      />
+      <TextInput
+        placeholder="enter password here"
+        onChangeText={(text) => setPassword2(text)}
+        value={password2}
+      />
+      <Button title="Submit" onPress={handleSignup} />
     </ParallaxScrollView>
   );
 }
