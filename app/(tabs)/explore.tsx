@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import type { IconSymbolName } from '@/components/ui/icon-symbol';
 
 type Msg =
   | { type: "number"; value: number }
@@ -11,43 +12,115 @@ type Msg =
 
 const { width } = Dimensions.get('window');
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type MetricCardProps = {
+  icon: IconSymbolName;
+  label: string;
+  value: number | string;
+  unit: string;
+  color: string;
+  bgColor: string;
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MAX_DATA_POINTS = 24;
+
+
+
 export default function EnergyDashboard() {
   const latestValue = useRef("shiballlll");
   const [timeRange, setTimeRange] = useState('24h');
-  const [message, setMessage] = useState("shiballlll");
+  const [hourlyData, setHourlyData] = useState<number[]>([]);
+  const [timestamps, setTimestamps] = useState<Date[]>([]);
+  const [currentUsage, setCurrentUsage] = useState(0);
+
+  // Keep a ref to the WebSocket so we can close it in cleanup.
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    var ws = new WebSocket("ws://localhost:8000/api");
+    const ws = new WebSocket('ws://localhost:8000/api');
+    wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const numberz = JSON.parse(event.data);
-      latestValue.current = numberz.value;
-      console.log(typeof latestValue.current);
-
-      console.log("Received message:", latestValue.current);
+    ws.onopen = () => {
+      console.log('WebSocket connected');
     };
 
-    const interval = setInterval(() => {
-      setMessage(latestValue.current);
-    }, 1000);
+    ws.onmessage = (event: WebSocketMessageEvent) => {
+      try {
+        const parsed = JSON.parse(event.data as string);
+
+        // Expecting the server to send: { "value": 2.7 }
+        // Adjust the key name below if your server uses a different field.
+        const incoming: number = parseFloat(parsed.value);
+
+        const now = new Date();
+
+        if (isNaN(incoming)) return;
+
+        // Update the "live" metric card immediately
+        setCurrentUsage(incoming);
+
+        // Append to the chart and keep the window to MAX_DATA_POINTS
+        setHourlyData(prev => {
+          const next = [...prev, incoming];
+          return next.length > MAX_DATA_POINTS
+            ? next.slice(next.length - MAX_DATA_POINTS)
+            : next;
+        });
+        setTimestamps(prev => {
+          const next = [...prev, now];
+          return next.length > MAX_DATA_POINTS
+            ? next.slice(next.length - MAX_DATA_POINTS)
+            : next;
+        });
+      } catch (e) {
+        console.warn('Failed to parse WebSocket message:', e);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket closed — reconnecting in 3s...');
+      setTimeout(() => {
+        if (wsRef.current === ws) {
+          // Only reconnect if this is still the active socket
+          wsRef.current = null;
+        }
+      }, 3000);
+    };
+
     return () => {
       ws.close();
-      clearInterval(interval);
+      wsRef.current = null;
     };
-  }, []);
+  }, []); // run once on mount
 
+  // ── Derived stats (update automatically when hourlyData changes) ─────────
+  const todayConsumption = hourlyData.reduce((sum, v) => sum + v, 0);
+  const monthlyCost = +(todayConsumption * 30 * 0.9).toFixed(1);
+  const co2Saved = +(todayConsumption * 0.233).toFixed(1); // kg CO₂ per kWh (US avg)
+  const maxValue = Math.max(...hourlyData, 0.1); // avoid division by zero
 
-  // Sample data
-  const currentUsage = 2.4;
-  const todayConsumption = 18.5;
-  const monthlyCost = 127.8;
-  const co2Saved = 12;
+  const timeLabels: string[] = (() => {
+    if (timestamps.length === 0) return ['--', '--', '--', '--', '--'];
+    const fmt = (d: Date) =>
+      d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const len = timestamps.length;
+    return [
+      fmt(timestamps[0]),                                        // oldest
+      fmt(timestamps[Math.floor(len * 0.25)]),                  // 25%
+      fmt(timestamps[Math.floor(len * 0.5)]),                   // midpoint
+      fmt(timestamps[Math.floor(len * 0.75)]),                  // 75%
+      'Now',                                                     // always "Now" for latest
+    ];
+  })();
 
-  const hourlyData = [
-    1.2, 1.1, 0.9, 0.8, 0.9, 1.5, 2.1, 2.8, 3.2, 2.9, 2.5, 2.7,
-    3.1, 2.8, 2.6, 2.4, 2.8, 3.5, 4.2, 3.8, 3.2, 2.8, 2.1, 1.8,
-  ];
-
+  // ── Static data ───────────────────────────────────────────────────────────
   const breakdown = [
     { name: 'Heating/Cooling', value: 45, color: '#ef4444' },
     { name: 'Appliances', value: 25, color: '#f59e0b' },
@@ -62,18 +135,8 @@ export default function EnergyDashboard() {
     { device: 'Washing Machine', status: 'off', time: '11:20 AM', power: '0 kW' },
   ];
 
-  const maxValue = Math.max(...hourlyData);
-
-  type MetricCardProps = {
-    icon: React.ComponentProps<typeof IconSymbol>['name'];
-    label: string;
-    value: number | string;
-    unit: string;
-    color: string;
-    bgColor: string;
-  };
-
-  const MetricCard = ({ icon, label, value, unit, color, bgColor }: MetricCardProps) => (
+  // ── Sub-components ────────────────────────────────────────────────────────
+  const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, unit, color, bgColor }) => (
     <ThemedView style={[styles.metricCard, { backgroundColor: '#ffffff' }]}>
       <View style={styles.metricHeader}>
         <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
@@ -86,17 +149,18 @@ export default function EnergyDashboard() {
     </ThemedView>
   );
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#2563eb', dark: '#1e40af' }}
       headerImage={
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.headerTitle}>Energy Dashboard</Text>
-            <Text style={styles.headerSubtitle}>Saturday, Feb 14, 2026</Text>
-          </View>
+        <ThemedView style={styles.headerContent}>
+          <ThemedView>
+            <ThemedText style={styles.headerTitle}>Energy Dashboard</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>Saturday, Feb 14, 2026</ThemedText>
+          </ThemedView>
           <IconSymbol name="bolt.fill" size={40} color="#ffffff" />
-        </View>
+        </ThemedView>
       }>
 
       {/* Metric Cards */}
@@ -105,7 +169,7 @@ export default function EnergyDashboard() {
           <MetricCard
             icon="bolt.fill"
             label="Current"
-            value={currentUsage}
+            value={currentUsage.toFixed(1)}
             unit="kW"
             color="#dc2626"
             bgColor="#fee2e2"
@@ -113,7 +177,7 @@ export default function EnergyDashboard() {
           <MetricCard
             icon="battery.100"
             label="Today"
-            value={todayConsumption}
+            value={todayConsumption.toFixed(1)}
             unit="kWh"
             color="#2563eb"
             bgColor="#dbeafe"
@@ -143,52 +207,62 @@ export default function EnergyDashboard() {
           <ThemedText type="subtitle">Usage Today</ThemedText>
           <View style={styles.timeRangeButtons}>
             <TouchableOpacity
-              style={[
-                styles.timeButton,
-                timeRange === '24h' && styles.timeButtonActive,
-              ]}
+              style={[styles.timeButton, timeRange === '24h' && styles.timeButtonActive]}
               onPress={() => setTimeRange('24h')}>
-              <Text
-                style={[
-                  styles.timeButtonText,
-                  timeRange === '24h' && styles.timeButtonTextActive,
-                ]}>
+              <Text style={[styles.timeButtonText, timeRange === '24h' && styles.timeButtonTextActive]}>
                 24h
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.timeButton,
-                timeRange === '7d' && styles.timeButtonActive,
-              ]}
+              style={[styles.timeButton, timeRange === '7d' && styles.timeButtonActive]}
               onPress={() => setTimeRange('7d')}>
-              <Text
-                style={[
-                  styles.timeButtonText,
-                  timeRange === '7d' && styles.timeButtonTextActive,
-                ]}>
+              <Text style={[styles.timeButtonText, timeRange === '7d' && styles.timeButtonTextActive]}>
                 7d
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Bar Chart */}
-        <View style={styles.chartContainer}>
-          {hourlyData.map((value, index) => (
-            <View
-              key={index}
-              style={[styles.bar, { height: ((value / maxValue) * 160) }]}
-            />
-          ))}
-        </View>
+        {/* Bar Chart — re-renders on every new WS message */}
+        {(() => {
+          const CHART_HEIGHT = 160;
+          const barCount = hourlyData.length;
+          const barWidth = barCount > 0 ? (width - 120) / MAX_DATA_POINTS : 0;
+          return (
+            <View style={styles.chartContainer}>
+              {hourlyData.length === 0 ? (
+                <View style={styles.chartEmpty}>
+                  <Text style={styles.chartEmptyText}>Waiting for data...</Text>
+                </View>
+              ) : (
+                hourlyData.map((value, index) => {
+                  const isLatest = index === hourlyData.length - 1;
+                  const barHeight = Math.max(4, (value / maxValue) * CHART_HEIGHT);
+                  return (
+                    <View
+                      key={index}
+                      style={[
+                        styles.bar,
+                        {
+                          height: barHeight,
+                          width: barWidth,
+                        },
+                        isLatest && styles.barLatest,
+                      ]}
+                    />
+                  );
+                })
+              )}
+            </View>
+          );
+        })()}
 
         <View style={styles.chartLabels}>
-          <Text style={styles.chartLabel}>12 AM</Text>
-          <Text style={styles.chartLabel}>6 AM</Text>
-          <Text style={styles.chartLabel}>12 PM</Text>
-          <Text style={styles.chartLabel}>6 PM</Text>
-          <Text style={styles.chartLabel}>Now</Text>
+          {timeLabels.map((label, i) => (
+            <Text key={i} style={[styles.chartLabel, label === 'Now' && styles.chartLabelNow]}>
+              {label}
+            </Text>
+          ))}
         </View>
       </ThemedView>
 
@@ -206,13 +280,7 @@ export default function EnergyDashboard() {
               </View>
               <View style={styles.progressBar}>
                 <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${item.value}%` as const,
-                      backgroundColor: item.color,
-                    },
-                  ]}
+                  style={[styles.progressFill, { width: `${item.value}%`, backgroundColor: item.color }]}
                 />
               </View>
             </View>
@@ -237,13 +305,7 @@ export default function EnergyDashboard() {
                 index !== recentActivity.length - 1 && styles.activityItemBorder,
               ]}>
               <View style={styles.activityLeft}>
-                <View
-                  style={[
-                    styles.activityIcon,
-                    item.status === 'on'
-                      ? styles.activityIconOn
-                      : styles.activityIconOff,
-                  ]}>
+                <View style={[styles.activityIcon, item.status === 'on' ? styles.activityIconOn : styles.activityIconOff]}>
                   <IconSymbol
                     name="power"
                     size={16}
@@ -258,13 +320,7 @@ export default function EnergyDashboard() {
                 </View>
               </View>
               <View style={styles.activityRight}>
-                <Text
-                  style={[
-                    styles.activityStatus,
-                    item.status === 'on'
-                      ? styles.activityStatusOn
-                      : styles.activityStatusOff,
-                  ]}>
+                <Text style={[styles.activityStatus, item.status === 'on' ? styles.activityStatusOn : styles.activityStatusOff]}>
                   {item.status.toUpperCase()}
                 </Text>
                 <Text style={styles.activityPower}>{item.power}</Text>
@@ -276,6 +332,8 @@ export default function EnergyDashboard() {
     </ParallaxScrollView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   headerContent: {
@@ -384,15 +442,29 @@ const styles = StyleSheet.create({
   chartContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     height: 160,
     marginBottom: 12,
   },
   bar: {
-    width: (width - 120) / 24,
+    width: (width - 120) / MAX_DATA_POINTS,
     backgroundColor: '#2563eb',
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
+  },
+  // The newest bar is highlighted in a brighter colour so live updates are obvious
+  barLatest: {
+    backgroundColor: '#60a5fa',
+  },
+  chartEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chartEmptyText: {
+    fontSize: 13,
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
   chartLabels: {
     flexDirection: 'row',
@@ -401,6 +473,10 @@ const styles = StyleSheet.create({
   chartLabel: {
     fontSize: 12,
     color: '#9ca3af',
+  },
+  chartLabelNow: {
+    color: '#2563eb',
+    fontWeight: '600',
   },
   breakdownContainer: {
     marginTop: 16,
