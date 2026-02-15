@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/backend.Dockerfile
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/frontend.Dockerfile
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    environment:
+      - EXPO_NO_TELEMETRY=1
+      # If the QR code points to the wrong IP, set this to your LAN IP:
+      # - REACT_NATIVE_PACKAGER_HOSTNAME=192.168.x.x
+    depends_on:
+      - backend
