@@ -1,21 +1,65 @@
-import { Image } from "expo-image";
-import { Platform, StyleSheet } from "react-native";
-
 import { HelloWave } from "@/components/hello-wave";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Image } from "expo-image";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, StyleSheet } from "react-native";
+
+type Msg =
+  | { type: "number"; value: number }
+  | { type: "error"; message: string };
 
 export default function Tester() {
-  async function sendJson() {
-    const response = await fetch("http://127.0.0.1:8000/api/pose-checker", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ pose }),
-    });
+  const latestValue = useRef("shiballlll");
+  const [message, setMessage] = useState("shiballlll");
 
-    const data = await response.json();
-  }
+  useEffect(() => {
+    var ws = new WebSocket("ws://localhost:8000/api");
+
+    ws.onmessage = (event) => {
+      const numberz = JSON.parse(event.data);
+      latestValue.current = numberz.value;
+      console.log(typeof latestValue.current);
+
+      console.log("Received message:", latestValue.current);
+    };
+
+    const interval = setInterval(() => {
+      setMessage(latestValue.current);
+    }, 1000);
+    return () => {
+      ws.close();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // const [values, setValues] = useState<number[]>([]);
+  // const [status, setStatus] = useState<
+  //   "connecting" | "open" | "closed" | "error"
+  // >("connecting");
+
+  // useEffect(() => {
+  //   const ws = new WebSocket("ws://localhost:8000/ws/generate_numbers");
+
+  //   ws.onopen = () => setStatus("open");
+  //   ws.onclose = () => setStatus("closed");
+  //   ws.onerror = () => setStatus("error");
+
+  //   ws.onmessage = (event) => {
+  //     try {
+  //       const msg: Msg = JSON.parse(event.data);
+  //       if (msg.type === "number") {
+  //         // keep last 200 numbers to avoid memory growth
+  //         setValues((prev) => [...prev.slice(-199), msg.value]);
+  //       }
+  //     } catch {
+  //       // ignore non-JSON messages
+  //     }
+  //   };
+
+  //   return () => ws.close();
+  // }, []);
 
   return (
     <ParallaxScrollView
@@ -46,6 +90,7 @@ export default function Tester() {
           </ThemedText>{" "}
           to open developer tools.
         </ThemedText>
+        <ThemedText id="shibal">{message}</ThemedText>
       </ThemedView>
       <ThemedView style={styles.stepContainer}></ThemedView>
     </ParallaxScrollView>
