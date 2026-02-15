@@ -4,13 +4,15 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Image } from "expo-image";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet } from "react-native";
+import { Button, Platform, StyleSheet, TextInput } from "react-native";
 
 type Msg =
   | { type: "number"; value: number }
   | { type: "error"; message: string };
 
 export default function Tester() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const latestValue = useRef("shiballlll");
   const [message, setMessage] = useState("shiballlll");
 
@@ -33,6 +35,26 @@ export default function Tester() {
       clearInterval(interval);
     };
   }, []);
+
+  async function handleSubmit() {
+    //add code to call backend api
+    //feed in username and password
+    //backend api should return whether or not the login was successful
+    const response = await fetch("http://localhost:8000/attempt_login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username: username, password: password }),
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      alert("Login successful!");
+    } else {
+      alert("Login failed: " + data.message);
+    }
+  }
 
   return (
     <ParallaxScrollView
@@ -66,6 +88,17 @@ export default function Tester() {
         <ThemedText id="shibal">{message}</ThemedText>
       </ThemedView>
       <ThemedView style={styles.stepContainer}></ThemedView>
+      <TextInput
+        placeholder="enter username here"
+        onChangeText={(text) => setUsername(text)}
+        value={username}
+      />
+      <TextInput
+        placeholder="enter password here"
+        onChangeText={(text) => setPassword(text)}
+        value={password}
+      />
+      <Button title="Submit" onPress={handleSubmit} />
     </ParallaxScrollView>
   );
 }
