@@ -1,18 +1,20 @@
 import hashlib
 import sqlite3
 from unittest import result
-from fastapi import FastAPI, Request
+from fastapi import Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 
 import asyncio
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 import uvicorn
 import json
 from pydantic import BaseModel
-import jwt
+from jose import JWTError, jwt
 
 
 app = FastAPI()
@@ -35,8 +37,27 @@ class LoginCredentials(BaseModel):
     username: str
     password: str
 
-# async def withAuth():
+SECRET_KEY = "supersecretkey"  # Change in production
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return {"username": username}
 
 @app.get("/")
 def index():
@@ -63,7 +84,10 @@ async def check_credentials(loginz: LoginCredentials):
     cur.execute("SELECT * FROM userdata WHERE username = ? AND password = ?", (username, password)) 
     # if result is not empty then the username and password are in db
     if cur.fetchall():
-        token = jwt.encode(username, password, algorithm="HS256")
+        token = create_access_token(
+            data={"sub": username},
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+         )
         return {"success": True, "message": "Login successful", "token": token}
     else:
         return {"success": False, "message": "Invalid credentials"}
@@ -88,3 +112,7 @@ async def add_credentials(loginz: LoginCredentials):
     cur.execute("INSERT INTO userdata (username, password) VALUES (?, ?)", (username, password))
     conn.commit()
     return {"success": True, "message": "Signup successful"}
+
+@app.get("/protected")
+def protected_route(current_user: dict = Depends(get_current_user)):
+    return {"message": f"Hello {current_user['username']}"}

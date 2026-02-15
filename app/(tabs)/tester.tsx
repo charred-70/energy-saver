@@ -50,7 +50,7 @@ export default function Tester() {
     const data = await response.json();
 
     if (data.success) {
-      alert("Login successful!");
+      alert("Login successful! Token: " + data.token);
     } else {
       alert("Login failed: " + data.message);
     }
