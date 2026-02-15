@@ -25,7 +25,7 @@ app.add_middleware(
 def index():
     return "index.html"
 
-@app.get("/api/advice")
+@app.get("/api")
 def get_advice():
 
     return 
