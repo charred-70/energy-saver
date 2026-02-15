@@ -1,14 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
+type Msg =
+  | { type: "number"; value: number }
+  | { type: "error"; message: string };
+
 const { width } = Dimensions.get('window');
 
 export default function EnergyDashboard() {
+  const latestValue = useRef("shiballlll");
   const [timeRange, setTimeRange] = useState('24h');
+  const [message, setMessage] = useState("shiballlll");
+
+  useEffect(() => {
+    var ws = new WebSocket("ws://localhost:8000/api");
+
+    ws.onmessage = (event) => {
+      const numberz = JSON.parse(event.data);
+      latestValue.current = numberz.value;
+      console.log(typeof latestValue.current);
+
+      console.log("Received message:", latestValue.current);
+    };
+
+    const interval = setInterval(() => {
+      setMessage(latestValue.current);
+    }, 1000);
+    return () => {
+      ws.close();
+      clearInterval(interval);
+    };
+  }, []);
+
 
   // Sample data
   const currentUsage = 2.4;
@@ -38,7 +65,7 @@ export default function EnergyDashboard() {
   const maxValue = Math.max(...hourlyData);
 
   type MetricCardProps = {
-    icon: IconSymbolName;
+    icon: React.ComponentProps<typeof IconSymbol>['name'];
     label: string;
     value: number | string;
     unit: string;
@@ -46,7 +73,7 @@ export default function EnergyDashboard() {
     bgColor: string;
   };
 
-  const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, unit, color, bgColor }) => (
+  const MetricCard = ({ icon, label, value, unit, color, bgColor }: MetricCardProps) => (
     <ThemedView style={[styles.metricCard, { backgroundColor: '#ffffff' }]}>
       <View style={styles.metricHeader}>
         <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
@@ -151,10 +178,7 @@ export default function EnergyDashboard() {
           {hourlyData.map((value, index) => (
             <View
               key={index}
-              style={[
-                styles.bar,
-                { height: `${(value / maxValue) * 100}%` },
-              ]}
+              style={[styles.bar, { height: ((value / maxValue) * 160) }]}
             />
           ))}
         </View>
@@ -185,7 +209,7 @@ export default function EnergyDashboard() {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${item.value}%`,
+                      width: `${item.value}%` as const,
                       backgroundColor: item.color,
                     },
                   ]}
