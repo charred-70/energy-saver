@@ -193,7 +193,7 @@ export default function HomeScreen() {
           },
         ]}
       >
-        <ThemedText style={styles.eyebrow}>SMART HOME ENERGY</ThemedText>
+        <ThemedText style={styles.eyebrow}>WATTWATCH</ThemedText>
         <ThemedText style={styles.headline}>Know Every{'\n'}Watt You Use</ThemedText>
         <ThemedText style={styles.subtext}>
           Real-time monitoring, cost insights, and carbon tracking — all in one place.

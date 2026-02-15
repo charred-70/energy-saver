@@ -511,7 +511,7 @@ export default function DevicesScreen() {
                 <Animated.View
                     style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }}
                 >
-                    <Text style={styles.eyebrow}>SMART HOME ENERGY</Text>
+                    <Text style={styles.eyebrow}>WATTWATCH</Text>
                     <View style={styles.headerRow}>
                         <Text style={styles.headline}>{'My\nDevices'}</Text>
                         <View style={styles.headerKw}>
