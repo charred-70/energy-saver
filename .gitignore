@@ -37,7 +37,11 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+.venv
 
 # generated native folders
 /ios
 /android
+
+__pycache__/
+*.py[cod]
