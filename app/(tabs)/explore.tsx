@@ -6,6 +6,10 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import type { IconSymbolName } from '@/components/ui/icon-symbol';
 
+type Msg =
+  | { type: "number"; value: number }
+  | { type: "error"; message: string };
+
 const { width } = Dimensions.get('window');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,6 +30,7 @@ const MAX_DATA_POINTS = 24;
 
 
 export default function EnergyDashboard() {
+  const latestValue = useRef("shiballlll");
   const [timeRange, setTimeRange] = useState('24h');
   const [hourlyData, setHourlyData] = useState<number[]>([]);
   const [timestamps, setTimestamps] = useState<Date[]>([]);
